@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -67,7 +68,7 @@ class _MyHomePageState extends State<MyHomePage> {
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: isValidURL ? _openUrl : null,
+                    onPressed: isValidURL ? () => _launchUrl() : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF139C9A),
                       shape: RoundedRectangleBorder(
@@ -112,8 +113,12 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {});
   }
 
-  void _openUrl(){
+  Future<void> _launchUrl() async {
+    Uri url = Uri.parse('${result!.code}');
 
+    if (!await launchUrl(url)) {
+      throw Exception('Could not launch $url');
+    }
   }
 
   @override
