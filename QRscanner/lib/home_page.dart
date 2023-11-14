@@ -20,6 +20,8 @@ class _MyHomePageState extends State<MyHomePage> {
   Barcode? result;
   QRViewController? controller;
   bool isPaused = false;
+  bool isDialogShown = false;
+  late bool isValidURL;
 
   // In order to get hot reload to work we need to pause the camera if the platform
   // is android, or resume the camera if the platform is iOS.
@@ -31,6 +33,87 @@ class _MyHomePageState extends State<MyHomePage> {
     } else if (Platform.isIOS) {
       controller!.resumeCamera();
     }
+  }
+
+  void _onQRViewCreated(QRViewController controller) {
+    setState(() {
+      this.controller = controller;
+    });
+
+    controller.scannedDataStream.listen((scanData) {
+      if (!isDialogShown) {
+        setState(() {
+          result = scanData;
+        });
+        if (result != null) {
+          _showResults();
+        }
+      }
+    });
+  }
+
+  void _showResults(){
+    isDialogShown = true;   // Set the flag to true to prevent repeated dialogs
+    isValidURL = Uri.parse('${result?.code}').isAbsolute;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('${describeEnum(result!.format).toUpperCase()} found!'),
+          content: Text('${result?.code}'),
+          actions: [
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: isValidURL ? _openUrl : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF139C9A),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text('Open', style: TextStyle(color: Colors.deepPurple[50]),),
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      isDialogShown = false;
+                      controller?.resumeCamera();
+                      isPaused = false;
+                      setState(() {});
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple[50],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: const BorderSide(width: 1.5, color: Color(0xFF139C9A)),
+                      ),
+                    ),
+                    child: const Text('OK', style: TextStyle(color: Color(0xFF139C9A)),),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+
+    controller?.pauseCamera();   // Pause scanning when the dialog is shown
+    isPaused = true;
+    setState(() {});
+  }
+
+  void _openUrl(){
+
   }
 
   @override
@@ -89,104 +172,9 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
             ),
           ),
-          // FittedBox(
-          //   fit: BoxFit.contain,
-          //   child: Column(
-          //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          //     children: <Widget>[
-          //       if (result != null)
-          //         Text('Barcode Type: ${describeEnum(result!.format)}   Data: ${result!.code}')
-          //       else
-          //         const Text('Scan a code'),
-          //     ],
-          //   ),
-          // ),
         ],
       ),
     );
-  }
-
-  void _onQRViewCreated(QRViewController controller) {
-    setState(() {
-      this.controller = controller;
-    });
-
-    bool isDialogShown = false;
-
-    controller.scannedDataStream.listen((scanData) {
-      if (!isDialogShown) {
-        setState(() {
-          result = scanData;
-        });
-
-        print('The result is ${result?.code}');
-
-        if (result != null) {
-          isDialogShown = true; // Set the flag to true to prevent repeated dialogs
-
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text('${describeEnum(result!.format).toUpperCase()} found!'),
-                content: Text('${result?.code}'),
-                actions: [
-                  Column(
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {},
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF139C9A),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: Text('Open', style: TextStyle(color: Colors.deepPurple[50]),),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                isDialogShown = false;
-                                controller.resumeCamera();
-                                isPaused = false;
-                                setState(() {});
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.deepPurple[50],
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  side: const BorderSide(width: 1.5, color: Color(0xFF139C9A)),
-                                ),
-                              ),
-                              child: const Text('OK', style: TextStyle(color: Color(0xFF139C9A)),),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              );
-            },
-          );
-
-          // Pause scanning when the dialog is shown
-          controller.pauseCamera();
-          isPaused = true;
-          setState(() {});
-        }
-      }
-    });
   }
 
   void _onPermissionSet(BuildContext context, QRViewController ctrl, bool p) {
